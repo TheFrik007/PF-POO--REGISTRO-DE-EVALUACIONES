@@ -15,7 +15,6 @@ public class CalculadorEvaluacion {
         double notaFinal = 100.0;
         List<Respuesta> respuestas = evaluacion.getRespuestas();
         
-        // Agrupar respuestas por bloques
         Map<Bloque, List<Respuesta>> respuestasPorBloque = respuestas.stream()
                 .collect(Collectors.groupingBy(respuesta -> respuesta.getPregunta().getBloque()));
         
@@ -24,20 +23,16 @@ public class CalculadorEvaluacion {
             List<Respuesta> respuestasDelBloque = entry.getValue();
             int numPreguntas = respuestasDelBloque.size();
             
-            // Calcular el porcentaje por bloque y por pregunta
             double porcentajePorBloque = 100.0 / respuestasPorBloque.size();
             double porcentajePorPregunta = porcentajePorBloque / numPreguntas;
 
-            // Contar las respuestas "NA" y "No"
             long countNA = respuestasDelBloque.stream().filter(respuesta -> "N/A".equals(respuesta.getRespuesta())).count();
             long countNo = respuestasDelBloque.stream().filter(respuesta -> "No".equals(respuesta.getRespuesta())).count();
 
-            // Ajustar el porcentaje por pregunta si hay respuestas "NA"
             if (countNA > 0) {
                 porcentajePorPregunta = porcentajePorBloque / (numPreguntas - countNA);
             }
 
-            // Restar el porcentaje correspondiente por cada respuesta "No"
             notaFinal -= countNo * porcentajePorPregunta;
         }
 

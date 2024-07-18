@@ -1,9 +1,11 @@
 package com.empresa.proyecto.view;
 
 import com.empresa.proyecto.dao.EvaluacionDAO;
+import com.empresa.proyecto.dao.LlamadaDAO;
 import com.empresa.proyecto.dao.RespuestaDAO;
 import com.empresa.proyecto.model.Bloque;
 import com.empresa.proyecto.model.Evaluacion;
+import com.empresa.proyecto.model.Llamada;
 import com.empresa.proyecto.model.Pregunta;
 import com.empresa.proyecto.model.Respuesta;
 
@@ -35,6 +37,7 @@ public class EvaluarBloque extends JFrame {
     private JButton anteriorButton;
     private ButtonGroup group;
     private int idLlamada;
+    private Llamada llamada;
 
     public EvaluarBloque(List<Bloque> bloques, int idLlamada) {
         if (bloques == null || bloques.isEmpty()) {
@@ -43,7 +46,7 @@ public class EvaluarBloque extends JFrame {
         this.bloques = bloques;
         this.idLlamada = idLlamada;
         this.respuestas = new ArrayList<>();
-        
+
         for (Bloque bloque : bloques) {
             if (bloque.getPreguntas() != null && !bloque.getPreguntas().isEmpty()) {
                 for (Pregunta pregunta : bloque.getPreguntas()) {
@@ -52,11 +55,25 @@ public class EvaluarBloque extends JFrame {
             }
         }
 
+        // Obtener la llamada desde la base de datos
+        try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/evaluaciones_db", "root", "")) {
+            LlamadaDAO llamadaDAO = new LlamadaDAO(connection);
+            llamada = llamadaDAO.obtenerLlamadaPorId(idLlamada);
+            if (llamada == null) {
+                throw new SQLException("No se encontró la llamada con id: " + idLlamada);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error al obtener la llamada: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            dispose();
+            return;
+        }
+
         setTitle("Evaluar Bloque");
         setSize(600, 400);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        
+
         JPanel panel = new JPanel();
         panel.setLayout(new GridLayout(5, 1));
 
@@ -82,34 +99,14 @@ public class EvaluarBloque extends JFrame {
         siguienteButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                guardarRespuesta();
-                if (preguntaActualIndex < bloques.get(bloqueActualIndex).getPreguntas().size() - 1) {
-                    preguntaActualIndex++;
-                } else if (bloqueActualIndex < bloques.size() - 1) {
-                    bloqueActualIndex++;
-                    preguntaActualIndex = 0;
-                } else {
-                    JOptionPane.showMessageDialog(null, "Has completado la evaluación.");
-                    guardarEvaluacion();
-                    new MenuPrincipal().setVisible(true);
-                    dispose();
-                    return;
-                }
-                actualizarPregunta();
+                manejarSiguiente();
             }
         });
 
         anteriorButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                guardarRespuesta();
-                if (preguntaActualIndex > 0) {
-                    preguntaActualIndex--;
-                } else if (bloqueActualIndex > 0) {
-                    bloqueActualIndex--;
-                    preguntaActualIndex = bloques.get(bloqueActualIndex).getPreguntas().size() - 1;
-                }
-                actualizarPregunta();
+                manejarAnterior();
             }
         });
 
@@ -168,20 +165,44 @@ public class EvaluarBloque extends JFrame {
         }
     }
 
+    private void manejarSiguiente() {
+        guardarRespuesta();
+        if (preguntaActualIndex < bloques.get(bloqueActualIndex).getPreguntas().size() - 1) {
+            preguntaActualIndex++;
+        } else if (bloqueActualIndex < bloques.size() - 1) {
+            bloqueActualIndex++;
+            preguntaActualIndex = 0;
+        } else {
+            JOptionPane.showMessageDialog(null, "Has completado la evaluación.");
+            guardarEvaluacion();
+            new MenuPrincipal().setVisible(true);
+            dispose();
+            return;
+        }
+        actualizarPregunta();
+    }
+
+    private void manejarAnterior() {
+        guardarRespuesta();
+        if (preguntaActualIndex > 0) {
+            preguntaActualIndex--;
+        } else if (bloqueActualIndex > 0) {
+            bloqueActualIndex--;
+            preguntaActualIndex = bloques.get(bloqueActualIndex).getPreguntas().size() - 1;
+        }
+        actualizarPregunta();
+    }
+
     private void guardarEvaluacion() {
-        try {
-            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/evaluaciones_db", "root", "");
+        try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/evaluaciones_db", "root", "")) {
             EvaluacionDAO evaluacionDAO = new EvaluacionDAO(connection);
             RespuestaDAO respuestaDAO = new RespuestaDAO(connection);
 
-            // Cálculo de la nota final
             BigDecimal notaFinal = calcularNotaFinal();
 
-            // Crear evaluación
-            Evaluacion evaluacion = new Evaluacion(0, idLlamada, new Date(), notaFinal, "Comentarios opcionales");
+            Evaluacion evaluacion = new Evaluacion(0, llamada, new Date(), notaFinal, "Comentarios opcionales");
             evaluacionDAO.agregarEvaluacion(evaluacion);
 
-            // Guardar respuestas
             for (Respuesta respuesta : respuestas) {
                 respuesta.setEvaluacion(evaluacion);
                 respuestaDAO.agregarRespuesta(respuesta);
@@ -211,7 +232,6 @@ public class EvaluarBloque extends JFrame {
                     if ("No".equals(respuesta.getRespuesta())) {
                         notaInicial -= porcentajePorPregunta;
                     } else if ("N/A".equals(respuesta.getRespuesta())) {
-                        // Ajustar el porcentaje restante en el bloque
                         double ajuste = porcentajePorPregunta / (totalPreguntas - 1);
                         for (Pregunta p : preguntas) {
                             if (!p.equals(pregunta)) {

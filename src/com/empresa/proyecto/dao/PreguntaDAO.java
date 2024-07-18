@@ -1,6 +1,7 @@
 package com.empresa.proyecto.dao;
 
 import com.empresa.proyecto.model.Pregunta;
+import com.empresa.proyecto.model.Bloque;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -16,16 +17,20 @@ public class PreguntaDAO {
 
     public Pregunta obtenerPreguntaPorId(int idPregunta) throws SQLException {
         String sql = "SELECT * FROM Pregunta WHERE idPregunta = ?";
-        PreparedStatement statement = connection.prepareStatement(sql);
-        statement.setInt(1, idPregunta);
-        ResultSet resultSet = statement.executeQuery();
-
-        if (resultSet.next()) {
-            int idBloque = resultSet.getInt("idBloque");
-            String textoPregunta = resultSet.getString("textoPregunta");
-            return new Pregunta(idPregunta, textoPregunta, null);  // Bloque es null por simplicidad
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, idPregunta);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    int idBloque = resultSet.getInt("idBloque");
+                    String textoPregunta = resultSet.getString("textoPregunta");
+                    
+                    BloqueDAO bloqueDAO = new BloqueDAO(connection);
+                    Bloque bloque = bloqueDAO.obtenerBloquePorId(idBloque);
+                    
+                    return new Pregunta(idPregunta, textoPregunta, bloque);
+                }
+            }
         }
-
         return null;
     }
 }

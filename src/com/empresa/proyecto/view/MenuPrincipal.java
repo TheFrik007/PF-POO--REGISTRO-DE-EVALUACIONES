@@ -8,32 +8,31 @@ public class MenuPrincipal extends JFrame {
 
     public MenuPrincipal() {
         setTitle("Menú Principal");
-        setSize(400, 200);
+        setSize(300, 200);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        
+
         JPanel panel = new JPanel();
         JButton nuevaEvaluacionButton = new JButton("Nueva Evaluación");
-        JButton verEvaluacionesButton = new JButton("Ver Evaluaciones");
-        
         nuevaEvaluacionButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                dispose(); // Cierra la ventana actual antes de abrir la nueva evaluación
                 new DatosLlamada().setVisible(true);
-                dispose();
             }
         });
-        
+        panel.add(nuevaEvaluacionButton);
+
+        JButton verEvaluacionesButton = new JButton("Ver Evaluaciones");
         verEvaluacionesButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                dispose(); // Cierra la ventana actual antes de abrir la ventana de ver evaluaciones
                 new VerEvaluaciones().setVisible(true);
-                dispose();
             }
         });
-        
-        panel.add(nuevaEvaluacionButton);
         panel.add(verEvaluacionesButton);
+
         add(panel);
     }
 

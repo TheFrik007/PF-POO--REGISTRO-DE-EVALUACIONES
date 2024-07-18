@@ -6,14 +6,14 @@ import java.util.List;
 
 public class Evaluacion {
     private int idEvaluacion;
-    private int idLlamada;
+    private Llamada llamada;
     private Date fecha;
     private BigDecimal notaFinal;
     private String comentarios;
     private List<Respuesta> respuestas;
     private String nombreCliente;
     private String nombreEvaluador;
-    private Llamada llamada;
+    
 
     public Evaluacion(int idEvaluacion, Llamada llamada, Date fecha, BigDecimal notaFinal, String comentarios) {
         this.idEvaluacion = idEvaluacion;
@@ -23,6 +23,8 @@ public class Evaluacion {
         this.comentarios = comentarios;
     }
 
+    
+
     // Getters y setters
 
     public int getIdEvaluacion() {
@@ -31,14 +33,6 @@ public class Evaluacion {
 
     public void setIdEvaluacion(int idEvaluacion) {
         this.idEvaluacion = idEvaluacion;
-    }
-
-    public int getIdLlamada() {
-        return idLlamada;
-    }
-
-    public void setIdLlamada(int idLlamada) {
-        this.idLlamada = idLlamada;
     }
 
     public Date getFecha() {

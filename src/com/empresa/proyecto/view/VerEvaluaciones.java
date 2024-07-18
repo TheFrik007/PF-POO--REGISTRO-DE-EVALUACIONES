@@ -8,6 +8,8 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -25,7 +27,10 @@ public class VerEvaluaciones extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        tableModel = new DefaultTableModel(new String[]{"ID Evaluación", "Nombre Cliente", "Nombre Evaluador", "Fecha", "Nota Final", "Comentarios"}, 0);
+        tableModel = new DefaultTableModel(new String[]{
+                "ID Evaluación", "Nombre Cliente", "Nombre Evaluador", "Número Llamada", 
+                "Fecha Llamada", "Resumen Llamada", "Nota Final", "Comentarios"
+        }, 0);
         table = new JTable(tableModel);
         cargarDatos();
 
@@ -40,8 +45,14 @@ public class VerEvaluaciones extends JFrame {
                 int selectedRow = table.getSelectedRow();
                 if (selectedRow != -1) {
                     int idEvaluacion = (int) tableModel.getValueAt(selectedRow, 0);
-                    new EditarEvaluacion(idEvaluacion).setVisible(true);
-                    dispose();
+                    EditarEvaluacion editarEvaluacion = new EditarEvaluacion(idEvaluacion);
+                    editarEvaluacion.addWindowListener(new WindowAdapter() {
+                        @Override
+                        public void windowClosed(WindowEvent e) {
+                            recargarDatos();
+                        }
+                    });
+                    editarEvaluacion.setVisible(true);
                 } else {
                     JOptionPane.showMessageDialog(null, "Selecciona una evaluación para editar.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
@@ -53,8 +64,8 @@ public class VerEvaluaciones extends JFrame {
         volverButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                dispose(); // Cierra la ventana actual antes de abrir el menú principal
                 new MenuPrincipal().setVisible(true);
-                dispose();
             }
         });
         buttonPanel.add(volverButton);
@@ -63,27 +74,40 @@ public class VerEvaluaciones extends JFrame {
     }
 
     private void cargarDatos() {
-    try {
-        Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/evaluaciones_db", "root", "");
-        EvaluacionDAO evaluacionDAO = new EvaluacionDAO(connection);
-        List<Evaluacion> evaluaciones = evaluacionDAO.obtenerTodasEvaluaciones();
+        try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/evaluaciones_db", "root", "")) {
+            EvaluacionDAO evaluacionDAO = new EvaluacionDAO(connection);
+            List<Evaluacion> evaluaciones = evaluacionDAO.obtenerTodasEvaluacionesConLlamada();
 
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
-        for (Evaluacion evaluacion : evaluaciones) {
-            Object[] row = new Object[]{
-                evaluacion.getIdEvaluacion(),
-                evaluacion.getLlamada().getNombreCliente(),
-                evaluacion.getLlamada().getNombreEvaluador(),
-                dateFormat.format(evaluacion.getFecha()),
-                evaluacion.getNotaFinal(),
-                evaluacion.getComentarios()
-            };
-            tableModel.addRow(row);
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+            for (Evaluacion evaluacion : evaluaciones) {
+                Object[] row = new Object[]{
+                        evaluacion.getIdEvaluacion(),
+                        evaluacion.getLlamada().getNombreCliente(),
+                        evaluacion.getLlamada().getNombreEvaluador(),
+                        evaluacion.getLlamada().getNumeroLlamada(),
+                        dateFormat.format(evaluacion.getLlamada().getFechaLlamada()),
+                        evaluacion.getLlamada().getResumenLlamada(),
+                        evaluacion.getNotaFinal(),
+                        evaluacion.getComentarios()
+                };
+                tableModel.addRow(row);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-    } catch (SQLException e) {
-        e.printStackTrace();
     }
-}
 
+    private void recargarDatos() {
+        tableModel.setRowCount(0); // Limpia la tabla
+        cargarDatos(); // Vuelve a cargar los datos
+    }
 
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new VerEvaluaciones().setVisible(true);
+            }
+        });
+    }
 }

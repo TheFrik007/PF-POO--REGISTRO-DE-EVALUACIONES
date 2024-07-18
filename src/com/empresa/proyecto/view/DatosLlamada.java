@@ -30,7 +30,7 @@ public class DatosLlamada extends JFrame {
         setSize(400, 400);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        
+
         JPanel panel = new JPanel();
         panel.setLayout(new GridLayout(6, 2));
 
@@ -72,12 +72,12 @@ public class DatosLlamada extends JFrame {
         String numeroLlamada = numeroLlamadaField.getText();
         String fechaLlamadaStr = fechaLlamadaField.getText();
         String resumenLlamada = resumenLlamadaArea.getText();
-        
+
         if (nombreCliente.isEmpty() || nombreEvaluador.isEmpty() || numeroLlamada.isEmpty() || fechaLlamadaStr.isEmpty() || resumenLlamada.isEmpty()) {
             JOptionPane.showMessageDialog(null, "Todos los campos son obligatorios", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        
+
         Date fechaLlamada;
         try {
             fechaLlamada = DateUtil.convertirStringADate(fechaLlamadaStr);
@@ -86,14 +86,14 @@ public class DatosLlamada extends JFrame {
             return;
         }
 
-        try {
-            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/evaluaciones_db", "root", "");
+        try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/evaluaciones_db", "root", "")) {
             LlamadaDAO llamadaDAO = new LlamadaDAO(connection);
 
-            Llamada llamada = new Llamada(0, nombreCliente, nombreEvaluador, numeroLlamada, fechaLlamada, resumenLlamada);
+            Llamada llamada = new Llamada(0, nombreCliente, nombreEvaluador, numeroLlamada, fechaLlamada, resumenLlamada); // Agregar todos los campos necesarios
             llamadaDAO.agregarLlamada(llamada);
 
-            List<Bloque> bloques = obtenerBloques();
+            List<Bloque> bloques = obtenerBloques(connection);
+
             if (bloques == null || bloques.isEmpty()) {
                 JOptionPane.showMessageDialog(null, "No se pudieron obtener los bloques de la base de datos.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
@@ -106,10 +106,9 @@ public class DatosLlamada extends JFrame {
         }
     }
 
-    private List<Bloque> obtenerBloques() {
+    private List<Bloque> obtenerBloques(Connection connection) {
         List<Bloque> bloques = null;
         try {
-            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/evaluaciones_db", "root", "");
             BloqueDAO bloqueDAO = new BloqueDAO(connection);
             bloques = bloqueDAO.obtenerTodosBloques();
         } catch (SQLException e) {

@@ -1,8 +1,6 @@
 package com.empresa.proyecto.model;
 
 import java.util.Date;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 
 public class Llamada {
     private int idLlamada;
@@ -11,9 +9,6 @@ public class Llamada {
     private String numeroLlamada;
     private Date fechaLlamada;
     private String resumenLlamada;
-
-    // Constructores, getters y setters
-    public Llamada() {}
 
     public Llamada(int idLlamada, String nombreCliente, String nombreEvaluador, String numeroLlamada, Date fechaLlamada, String resumenLlamada) {
         this.idLlamada = idLlamada;
@@ -61,9 +56,9 @@ public class Llamada {
         return fechaLlamada;
     }
 
-public void setFechaLlamada(Date fechaLlamada) {
-    this.fechaLlamada = fechaLlamada;
-}
+    public void setFechaLlamada(Date fechaLlamada) {
+        this.fechaLlamada = fechaLlamada;
+    }
 
     public String getResumenLlamada() {
         return resumenLlamada;

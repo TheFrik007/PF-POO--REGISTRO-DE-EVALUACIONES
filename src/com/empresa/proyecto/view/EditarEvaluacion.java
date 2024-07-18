@@ -1,11 +1,9 @@
-
 package com.empresa.proyecto.view;
 
 import com.empresa.proyecto.dao.EvaluacionDAO;
 import com.empresa.proyecto.dao.LlamadaDAO;
 import com.empresa.proyecto.model.Evaluacion;
 import com.empresa.proyecto.model.Llamada;
-import com.empresa.proyecto.service.CalculadorEvaluacion;
 
 import javax.swing.*;
 import java.awt.*;
@@ -20,113 +18,106 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class EditarEvaluacion extends JFrame {
-
-    private JTextField fechaField;
-    private JTextField notaFinalField;
-    private JTextArea comentariosArea;
+    private Evaluacion evaluacion;
     private JTextField nombreClienteField;
     private JTextField nombreEvaluadorField;
-    private int idEvaluacion;
+    private JTextField numeroLlamadaField;
+    private JTextField fechaLlamadaField;
+    private JTextArea resumenLlamadaArea;
+    private JTextField notaFinalField;
+    private JTextArea comentariosArea;
 
     public EditarEvaluacion(int idEvaluacion) {
-        this.idEvaluacion = idEvaluacion;
         setTitle("Editar Evaluación");
-        setSize(400, 400);
+        setSize(400, 600);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        JPanel panel = new JPanel();
-        panel.setLayout(new GridLayout(7, 2));
-
-        panel.add(new JLabel("Nombre del Cliente:"));
-        nombreClienteField = new JTextField();
-        panel.add(nombreClienteField);
-
-        panel.add(new JLabel("Nombre del Evaluador:"));
-        nombreEvaluadorField = new JTextField();
-        panel.add(nombreEvaluadorField);
-
-        panel.add(new JLabel("Fecha (DD/MM/YYYY):"));
-        fechaField = new JTextField();
-        panel.add(fechaField);
-
-        panel.add(new JLabel("Nota Final:"));
-        notaFinalField = new JTextField();
-        panel.add(notaFinalField);
-
-        panel.add(new JLabel("Comentarios:"));
-        comentariosArea = new JTextArea();
-        panel.add(new JScrollPane(comentariosArea));
-
-        // Añadir otros campos de edición aquí...
-
-        JButton guardarButton = new JButton("Guardar");
-        guardarButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                guardarEvaluacion();
-            }
-        });
-        panel.add(guardarButton);
-
-        JButton cancelarButton = new JButton("Cancelar");
-        cancelarButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                dispose();
-            }
-        });
-        panel.add(cancelarButton);
-
-        add(panel);
-        cargarDatosEvaluacion();
-    }
-
-    private void cargarDatosEvaluacion() {
-        try {
-            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/evaluaciones_db", "root", "");
+        try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/evaluaciones_db", "root", "")) {
             EvaluacionDAO evaluacionDAO = new EvaluacionDAO(connection);
-            Evaluacion evaluacion = evaluacionDAO.obtenerEvaluacionPorId(idEvaluacion);
+            evaluacion = evaluacionDAO.obtenerEvaluacionPorId(idEvaluacion);
 
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
-            fechaField.setText(dateFormat.format(evaluacion.getFecha()));
-            notaFinalField.setText(evaluacion.getNotaFinal().toString());
-            comentariosArea.setText(evaluacion.getComentarios());
+            JPanel panel = new JPanel();
+            panel.setLayout(new GridLayout(8, 2));
 
-            // Obtener los datos de llamada asociados para llenar los campos de nombre del cliente y evaluador
-            LlamadaDAO llamadaDAO = new LlamadaDAO(connection);
-            Llamada llamada = llamadaDAO.obtenerLlamadaPorId(evaluacion.getIdLlamada());
+            panel.add(new JLabel("Nombre del Cliente:"));
+            nombreClienteField = new JTextField(evaluacion.getLlamada().getNombreCliente());
+            panel.add(nombreClienteField);
 
-            nombreClienteField.setText(llamada.getNombreCliente());
-            nombreEvaluadorField.setText(llamada.getNombreEvaluador());
+            panel.add(new JLabel("Nombre del Evaluador:"));
+            nombreEvaluadorField = new JTextField(evaluacion.getLlamada().getNombreEvaluador());
+            panel.add(nombreEvaluadorField);
+
+            panel.add(new JLabel("Número de Llamada:"));
+            numeroLlamadaField = new JTextField(evaluacion.getLlamada().getNumeroLlamada());
+            panel.add(numeroLlamadaField);
+
+            panel.add(new JLabel("Fecha de la Llamada (DD-MM-YYYY):"));
+            fechaLlamadaField = new JTextField(new SimpleDateFormat("dd-MM-yyyy").format(evaluacion.getLlamada().getFechaLlamada()));
+            panel.add(fechaLlamadaField);
+
+            panel.add(new JLabel("Resumen de la Llamada:"));
+            resumenLlamadaArea = new JTextArea(evaluacion.getLlamada().getResumenLlamada());
+            panel.add(new JScrollPane(resumenLlamadaArea));
+
+            panel.add(new JLabel("Nota Final:"));
+            notaFinalField = new JTextField(evaluacion.getNotaFinal().toString());
+            panel.add(notaFinalField);
+
+            panel.add(new JLabel("Comentarios:"));
+            comentariosArea = new JTextArea(evaluacion.getComentarios());
+            panel.add(new JScrollPane(comentariosArea));
+
+            JButton guardarButton = new JButton("Guardar");
+            guardarButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    guardarCambios();
+                }
+            });
+
+            panel.add(guardarButton);
+            add(panel);
 
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    private void guardarEvaluacion() {
-        try {
-            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/evaluaciones_db", "root", "");
+    private void guardarCambios() {
+        try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/evaluaciones_db", "root", "")) {
+            LlamadaDAO llamadaDAO = new LlamadaDAO(connection);
             EvaluacionDAO evaluacionDAO = new EvaluacionDAO(connection);
-            CalculadorEvaluacion calculadorEvaluacion = new CalculadorEvaluacion();
 
-            Date fecha = null;
+            String nombreCliente = nombreClienteField.getText();
+            String nombreEvaluador = nombreEvaluadorField.getText();
+            String numeroLlamada = numeroLlamadaField.getText();
+            String fechaLlamadaStr = fechaLlamadaField.getText();
+            String resumenLlamada = resumenLlamadaArea.getText();
+            BigDecimal notaFinal = new BigDecimal(notaFinalField.getText());
+            String comentarios = comentariosArea.getText();
+
+            Date fechaLlamada;
             try {
-                fecha = new SimpleDateFormat("dd/MM/yyyy").parse(fechaField.getText());
+                fechaLlamada = new SimpleDateFormat("dd-MM-yyyy").parse(fechaLlamadaStr);
             } catch (ParseException e) {
-                JOptionPane.showMessageDialog(null, "Fecha inválida. Formato correcto: DD/MM/YYYY", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Formato de fecha inválido.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
-            BigDecimal notaFinal = new BigDecimal(notaFinalField.getText());
-            String comentarios = comentariosArea.getText();
-            Llamada llamada = new Llamada(idLlamada, nombreCliente, nombreEvaluador, null, null);
-            Evaluacion evaluacion = new Evaluacion(idEvaluacion, 0, fecha, notaFinal, comentarios);
+            Llamada llamada = evaluacion.getLlamada();
+            llamada.setNombreCliente(nombreCliente);
+            llamada.setNombreEvaluador(nombreEvaluador);
+            llamada.setNumeroLlamada(numeroLlamada);
+            llamada.setFechaLlamada(fechaLlamada);
+            llamada.setResumenLlamada(resumenLlamada);
+            llamadaDAO.actualizarLlamada(llamada);
+
+            evaluacion.setNotaFinal(notaFinal);
+            evaluacion.setComentarios(comentarios);
             evaluacionDAO.actualizarEvaluacion(evaluacion);
 
-            JOptionPane.showMessageDialog(null, "Evaluación actualizada correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-            new VerEvaluaciones().setVisible(true);
+            JOptionPane.showMessageDialog(this, "Cambios guardados exitosamente.");
             dispose();
         } catch (SQLException e) {
             e.printStackTrace();
