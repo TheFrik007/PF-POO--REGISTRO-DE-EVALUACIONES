@@ -3,6 +3,10 @@ package com.empresa.proyecto.view;
 import com.empresa.proyecto.dao.EvaluacionDAO;
 import com.empresa.proyecto.model.Evaluacion;
 
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -10,6 +14,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.FileOutputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -70,6 +75,16 @@ public class VerEvaluaciones extends JFrame {
         });
         buttonPanel.add(volverButton);
 
+        // Añadir el botón para generar el reporte
+        JButton reporteButton = new JButton("Generar Reporte");
+        reporteButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                generarReporte();
+            }
+        });
+        buttonPanel.add(reporteButton);
+
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
@@ -100,6 +115,44 @@ public class VerEvaluaciones extends JFrame {
     private void recargarDatos() {
         tableModel.setRowCount(0); // Limpia la tabla
         cargarDatos(); // Vuelve a cargar los datos
+    }
+
+    private void generarReporte() {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Evaluaciones");
+
+            // Crear el encabezado
+            String[] columnas = {"ID Evaluación", "Nombre Cliente", "Nombre Evaluador", "Número Llamada", "Fecha Llamada", "Resumen Llamada", "Nota Final", "Comentarios"};
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < columnas.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(columnas[i]);
+            }
+
+            // Llenar los datos
+            int rowNum = 1;
+            for (int i = 0; i < tableModel.getRowCount(); i++) {
+                Row row = sheet.createRow(rowNum++);
+                for (int j = 0; j < tableModel.getColumnCount(); j++) {
+                    Cell cell = row.createCell(j);
+                    cell.setCellValue(tableModel.getValueAt(i, j).toString());
+                }
+            }
+
+            // Ajustar el tamaño de las columnas
+            for (int i = 0; i < columnas.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            // Escribir el archivo en el sistema
+            try (FileOutputStream fileOut = new FileOutputStream("reporte_evaluaciones.xlsx")) {
+                workbook.write(fileOut);
+                JOptionPane.showMessageDialog(null, "Reporte generado exitosamente.");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error al generar el reporte.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     public static void main(String[] args) {
